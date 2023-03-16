@@ -4,3 +4,10 @@ SpeechRecognition
 torch
 git+https://github.com/openai/whisper.git
 requests
+pyaudio
+https://github.com/cyberkitsune/speech_recognition/archive/refs/heads/vrcsubs-edits.zip
+python-osc
+pyyaml
+googletrans==4.0.0rc1
+deepl
+vosk

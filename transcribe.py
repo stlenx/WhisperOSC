@@ -37,6 +37,8 @@ def main():
                         help="How much empty space between recordings before we "
                              "consider it a new line in the transcription.", type=float)
     
+    parser.add_argument("--device", default="cuda")
+    
     
     if 'linux' in platform:
         parser.add_argument("--default_microphone", default='pulse',
