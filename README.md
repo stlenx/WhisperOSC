@@ -3,12 +3,9 @@
 This is a modified script from https://github.com/davabase/whisper_real_time to send the transcription to VRChat through OSC!
 
 > This app requires you to have FFMpeg installed and added to your PATH
+> This app requires you to have git installed to install the dependencies
 
-Before running any of the .bat files, make sure to install the dependencies by running
-
-```
-pip install -r requirements.txt
-```
+Before running any of the .bat files, make sure to install the dependencies by running the INSTALLREQUIREMENTS.bat file
 
 In a cmd window located in the root file.
 
