@@ -2,3 +2,24 @@
 
 This is a modified script from https://github.com/davabase/whisper_real_time to send the transcription to VRChat through OSC!
 
+> This app requires you to have FFMpeg installed and added to your PATH
+
+Before running any of the .bat files, make sure to install the dependencies by running
+
+```
+pip install -r requirements.txt
+```
+
+In a cmd window located in the root file.
+
+There's different AI models to use, the better they are the more accurate the transcription, but the more performance and **VRAM** required. Play around with them to find what works best for you. I recommend base.
+
+|  Size  | Parameters | Required VRAM | Relative speed |
+|:------:|:----------:|:-------------:|:--------------:|
+|  tiny  |    39 M    |     ~1 GB     |      ~32x      |
+|  base  |    74 M    |     ~1 GB     |      ~16x      |
+| small  |   244 M    |     ~2 GB     |      ~6x       |
+| medium |   769 M    |     ~5 GB     |      ~2x       |
+| large  |   1550 M   |    ~10 GB     |       1x       |
+
+If you run the NonEnglish version, it's a "language free" mode. This means that you can speak in whatever language you like, and it'll just work. You can switch language to language from one sentence to another. However, since the AI needs to identify the language it can get it wrong. If you're only going to speak english, stick to the normal version.
