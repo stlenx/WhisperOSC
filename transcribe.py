@@ -98,16 +98,20 @@ def main():
         # Grab the raw bytes and push it into the thread safe queue.
         data = audio.get_raw_data()
         data_queue.put(data)
-
+    
     # Create a background thread that will pass us raw audio bytes.
     # We could do this manually but SpeechRecognizer provides a nice helper.
     recorder.listen_in_background(source, record_callback, phrase_time_limit=record_timeout)
 
-    # Cue the user that we're ready to go.
-    print("Model loaded.\n")
-
     client = udp_client.SimpleUDPClient("127.0.0.1", 9000)
     current_text = ""
+
+    # Cue the user that we're ready to go.
+    if torch.cuda.is_available():
+        print("Using GPU")
+    else:
+        print("GPU not available, using CPU")
+    print("Model loaded.\n")
 
     while True:
         try:
