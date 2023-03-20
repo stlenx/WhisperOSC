@@ -17,11 +17,8 @@ from sys import platform
 from pythonosc import udp_client
 from pythonosc.dispatcher import Dispatcher
 from pythonosc.osc_server import BlockingOSCUDPServer
-from yaml import load
-try:
-    from yaml import CLoader as Loader
-except ImportError:
-    from yaml import Loader
+
+# import PySimpleGUI as sg
 
 def main():
     parser = argparse.ArgumentParser()
@@ -85,8 +82,7 @@ def main():
     phrase_timeout = args.phrase_timeout
 
     temp_file = NamedTemporaryFile().name
-    transcription = ['']
-    
+
     with source:
         recorder.adjust_for_ambient_noise(source)
 
@@ -113,7 +109,14 @@ def main():
         print("GPU not available, using CPU")
     print("Model loaded.\n")
 
+
+    # layout = [[sg.Text("Hello from PysimpleGUI")], [sg.Button("OK")]]
+    # window = sg.Window("Demo", layout)
+
+    
+
     while True:
+
         try:
             now = datetime.utcnow()
             # Pull raw recorded audio from the queue.
@@ -144,16 +147,15 @@ def main():
                 result = audio_model.transcribe(temp_file, fp16=torch.cuda.is_available())
                 text = result['text'].strip()
 
-                client.send_message("/chatbox/input", [text, True])
+                
                 print(text)
 
-                # If we detected a pause between recordings, add a new item to our transcripion.
-                # Otherwise edit the existing one.
-                if phrase_complete:
-                    transcription.append(text)
+                if(len(text) > 144):
+                    client.send_message("/chatbox/input", [text[len(text)-144:len(text)], True])
                 else:
-                    transcription[-1] = text
-
+                    client.send_message("/chatbox/input", [text, True])
+                
+                    
                 # Clear the console to reprint the updated transcription.
                 # os.system('cls' if os.name=='nt' else 'clear')
                     
@@ -166,6 +168,7 @@ def main():
             break
 
     print("\nClosing script")
+    window.close()
 
 
 if __name__ == "__main__":
