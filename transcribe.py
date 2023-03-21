@@ -14,11 +14,10 @@ from time import sleep
 from sys import platform
 
 
+import socket
 from pythonosc import udp_client
 from pythonosc.dispatcher import Dispatcher
 from pythonosc.osc_server import BlockingOSCUDPServer
-
-# import PySimpleGUI as sg
 
 def main():
     parser = argparse.ArgumentParser()
@@ -100,6 +99,7 @@ def main():
     recorder.listen_in_background(source, record_callback, phrase_time_limit=record_timeout)
 
     client = udp_client.SimpleUDPClient("127.0.0.1", 9000)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
     current_text = ""
 
     # Cue the user that we're ready to go.
@@ -109,14 +109,7 @@ def main():
         print("GPU not available, using CPU")
     print("Model loaded.\n")
 
-
-    # layout = [[sg.Text("Hello from PysimpleGUI")], [sg.Button("OK")]]
-    # window = sg.Window("Demo", layout)
-
-    
-
     while True:
-
         try:
             now = datetime.utcnow()
             # Pull raw recorded audio from the queue.
@@ -156,11 +149,7 @@ def main():
                     client.send_message("/chatbox/input", [text, True])
                 
                     
-                # Clear the console to reprint the updated transcription.
-                # os.system('cls' if os.name=='nt' else 'clear')
-                    
-                # Flush stdout.
-                # print('', end='', flush=True)
+                sock.sendto(bytes(text, "utf-8"), ("127.0.0.1", 6969))
 
                 # Infinite loops are bad for processors, must sleep.
                 sleep(0.25)
