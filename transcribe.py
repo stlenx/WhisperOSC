@@ -148,7 +148,7 @@ def GUI(communicator):
     OSCListener.start()
 
     sg.theme('DarkGrey6')
-    selected_color = '#757575'
+    selected_color = '#949494'
     unselected_color = '#4f4f4f'
 
     def set_buttons():
@@ -192,23 +192,23 @@ def GUI(communicator):
         print("Stopping the text update.")
 
 
-    button_style = {'font': ('Sans-Serif', 18),  # Set the font and font size
-                'border_width': 0,  # Set the border width
-                'pad': (8, 8)}  # Set the padding around the button
+    button_style = {'font': ('Sans-Serif', 18),
+                'border_width': 0,
+                'pad': (8, 8),
+                'button_color': unselected_color}
     
     layout = [[sg.Push(), sg.Button('tiny', key='tiny', **button_style), sg.Button('base', key='base', **button_style), sg.Button('small', key='small', **button_style), sg.Button('medium', key='medium', **button_style), sg.Button('large', key='large', **button_style), sg.Push()],
               [sg.VPush()],
-              [sg.Text("", key="-TEXT-", size=(30, 5), font=('Sans-Serif', 26), justification='c')],
-              [sg.VPush()]]
+              [sg.Text("", key="-TEXT-", size=(33, 4), font=('Sans-Serif', 26), justification='c')],
+              [sg.VPush()],
+              [sg.Push(), sg.Button('Non english', key='noEnglish', **button_style), sg.Push()]]
 
-    window = sg.Window("WhisperOSC", layout, finalize=True, resizable=True, size=(600, 320), icon='Images/OpenAI.ico')
+    window = sg.Window("WhisperOSC", layout, finalize=True, resizable=True, size=(669, 320), icon='Images/OpenAI.ico')
 
     window['-TEXT-'].expand(True, True)
     text_element = window['-TEXT-']  # get the Text element by its key
 
-    #Preset the button colours
     set_buttons()
-    
 
     # start a separate thread to update the GUI
     updateText_close = Event()
@@ -221,6 +221,17 @@ def GUI(communicator):
         event, values = window.read()
         if event == sg.WIN_CLOSED:
             break
+
+        if event == 'noEnglish':
+            if noEnglish:
+                window['noEnglish'].Update(button_color = unselected_color)
+                noEnglish = False
+            else:
+                window['noEnglish'].Update(button_color = selected_color)
+                noEnglish = True
+
+            OSCListener = run_model(OSCListener)
+        
         if event == 'tiny':
             model = 'tiny'
             OSCListener = run_model(OSCListener)
