@@ -19,6 +19,6 @@ There's different AI models to use, the better they are the more accurate the tr
 | medium |   769 M    |     ~5 GB     |      ~2x       |
 | large  |   1550 M   |    ~10 GB     |       1x       |
 
-If you run the NonEnglish version, it's a "language free" mode. This means that you can speak in whatever language you like, and it'll just work. You can switch language to language from one sentence to another. However, since the AI needs to identify the language it can get it wrong. If you're only going to speak english, stick to the normal version.
+If you toggle Non English mode, it's a "language free" mode. This means that you can speak in whatever language you like, and it'll just work. You can switch language to language from one sentence to another. However, since the AI needs to identify the language it can get it wrong. If you're only going to speak english, stick to having it off.
 
 To launch the app, double click the LaunchApp.vbs file :D
