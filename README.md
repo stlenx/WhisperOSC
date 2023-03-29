@@ -8,6 +8,7 @@ This is a modified script from https://github.com/davabase/whisper_real_time to 
 
 Before running the app, make sure to install the dependencies by running the INSTALLREQUIREMENTS.bat file
 
+![Showcase](Images/Showcase.PNG)
 
 There's different AI models to use, the better they are the more accurate the transcription, but the more performance and **VRAM** required. Play around with them to find what works best for you. I recommend base.
 
