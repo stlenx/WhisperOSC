@@ -6,6 +6,7 @@ import os
 import speech_recognition as sr
 import whisper
 import torch
+import gc
 
 import threading
 from threading import Event
@@ -135,6 +136,11 @@ def main(model, noEnglish, communicator, stop_event):
         except KeyboardInterrupt:
             break
 
+    del audio_model
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        
+    gc.collect()
     print("\nClosing script")
 
 
