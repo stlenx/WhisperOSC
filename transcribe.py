@@ -7,41 +7,21 @@ import speech_recognition as sr
 import whisper
 import torch
 
+import threading
+from threading import Event
 from datetime import datetime, timedelta
 from queue import Queue
 from tempfile import NamedTemporaryFile
 from time import sleep
 from sys import platform
 
-
+import PySimpleGUI as sg
 import socket
 from pythonosc import udp_client
 from pythonosc.dispatcher import Dispatcher
 from pythonosc.osc_server import BlockingOSCUDPServer
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--model", default="tiny", help="Model to use",
-                        choices=["tiny", "base", "small", "medium", "large"])
-    parser.add_argument("--non_english", action='store_true',
-                        help="Don't use the english model.")
-    parser.add_argument("--energy_threshold", default=1000,
-                        help="Energy level for mic to detect.", type=int)
-    parser.add_argument("--record_timeout", default=2,
-                        help="How real time the recording is in seconds.", type=float)
-    parser.add_argument("--phrase_timeout", default=3,
-                        help="How much empty space between recordings before we "
-                             "consider it a new line in the transcription.", type=float)
-    
-    parser.add_argument("--device", default="cuda")
-    
-    
-    if 'linux' in platform:
-        parser.add_argument("--default_microphone", default='pulse',
-                            help="Default microphone name for SpeechRecognition. "
-                                 "Run this with 'list' to view available Microphones.", type=str)
-    args = parser.parse_args()
-    
+def main(model, noEnglish, communicator, stop_event):
     # The last time a recording was retreived from the queue.
     phrase_time = None
     # Current raw audio bytes.
@@ -50,14 +30,21 @@ def main():
     data_queue = Queue()
     # We use SpeechRecognizer to record our audio because it has a nice feauture where it can detect when speech ends.
     recorder = sr.Recognizer()
-    recorder.energy_threshold = args.energy_threshold
+    recorder.energy_threshold = 1000
     # Definitely do this, dynamic energy compensation lowers the energy threshold dramtically to a point where the SpeechRecognizer never stops recording.
     recorder.dynamic_energy_threshold = False
+
+    if torch.cuda.is_available():
+        print("Using GPU, Loading model...")
+        communicator.put("Using GPU, Loading model...")
+    else:
+        print("GPU not available, using CPU, Loading model...")
+        communicator.put("GPU not available, using CPU, Loading model...")
     
     # Important for linux users. 
     # Prevents permanent application hang and crash by using the wrong Microphone
     if 'linux' in platform:
-        mic_name = args.default_microphone
+        mic_name = 'pulse'
         if not mic_name or mic_name == 'list':
             print("Available microphone devices are: ")
             for index, name in enumerate(sr.Microphone.list_microphone_names()):
@@ -72,13 +59,12 @@ def main():
         source = sr.Microphone(sample_rate=16000)
         
     # Load / Download model
-    model = args.model
-    if args.model != "large" and not args.non_english:
+    if model != "large" and not noEnglish:
         model = model + ".en"
     audio_model = whisper.load_model(model)
 
-    record_timeout = args.record_timeout
-    phrase_timeout = args.phrase_timeout
+    record_timeout = 2 #Default
+    phrase_timeout = 3 #Default
 
     temp_file = NamedTemporaryFile().name
 
@@ -99,17 +85,14 @@ def main():
     recorder.listen_in_background(source, record_callback, phrase_time_limit=record_timeout)
 
     client = udp_client.SimpleUDPClient("127.0.0.1", 9000)
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
     current_text = ""
 
     # Cue the user that we're ready to go.
-    if torch.cuda.is_available():
-        print("Using GPU")
-    else:
-        print("GPU not available, using CPU")
     print("Model loaded.\n")
+    communicator.put("Model loaded")
 
-    while True:
+    #If the stop event gets called, we stoppin
+    while not stop_event.is_set():
         try:
             now = datetime.utcnow()
             # Pull raw recorded audio from the queue.
@@ -140,16 +123,12 @@ def main():
                 result = audio_model.transcribe(temp_file, fp16=torch.cuda.is_available())
                 text = result['text'].strip()
 
-                
+                #Logging stuff is fun
                 print(text)
-
-                if(len(text) > 144):
-                    client.send_message("/chatbox/input", [text[len(text)-144:len(text)], True])
-                else:
-                    client.send_message("/chatbox/input", [text, True])
                 
-                    
-                sock.sendto(bytes(text, "utf-8"), ("127.0.0.1", 6969))
+                #Send the text to vrchat and the GUI, while limiting it to 144 characters
+                client.send_message("/chatbox/input", [text[len(text)-144:len(text)], True])
+                communicator.put(text[len(text)-144:len(text)])
 
                 # Infinite loops are bad for processors, must sleep.
                 sleep(0.25)
@@ -157,8 +136,126 @@ def main():
             break
 
     print("\nClosing script")
+
+
+
+def GUI(communicator):
+    model = 'tiny'
+    noEnglish = False
+    
+    stop_event = Event()
+    OSCListener = threading.Thread(target=main, args=(model, noEnglish, communicator, stop_event))
+    OSCListener.start()
+
+    sg.theme('DarkGrey6')
+    selected_color = '#757575'
+    unselected_color = '#4f4f4f'
+
+    def set_buttons():
+        window['tiny'].Update(button_color = unselected_color)
+        window['base'].Update(button_color = unselected_color)
+        window['small'].Update(button_color = unselected_color)
+        window['medium'].Update(button_color = unselected_color)
+        window['large'].Update(button_color = unselected_color)
+
+        window[model].Update(button_color = selected_color)
+
+    def run_model(OSCListener):
+        #Set the button colours
+        set_buttons()
+        
+        #Cue to the user he's done something
+        communicator.put('Restarting model...')
+        
+        #Stop the listner
+        stop_event.set()
+        OSCListener.join()
+
+        #Reset the stop event so the next listener doesn't immediatedly stop
+        stop_event.clear()
+        OSCListener = threading.Thread(target=main, args=(model, noEnglish, communicator, stop_event))
+        OSCListener.start()
+
+        return OSCListener
+    
+    
+    #This function runs in a separate thread and updates the GUI text
+    def update_text(text_element, communicator, stop_event):
+        while not stop_event.is_set():
+            try:
+                text_element.update(communicator.get(timeout=0.1))
+            except Exception as e:
+                if not communicator.empty():
+                    print(f"Caught exception in update_text: {e}")
+                
+            sleep(0.1)
+        print("Stopping the text update.")
+
+
+    button_style = {'font': ('Sans-Serif', 18),  # Set the font and font size
+                'border_width': 0,  # Set the border width
+                'pad': (8, 8)}  # Set the padding around the button
+    
+    layout = [[sg.Push(), sg.Button('tiny', key='tiny', **button_style), sg.Button('base', key='base', **button_style), sg.Button('small', key='small', **button_style), sg.Button('medium', key='medium', **button_style), sg.Button('large', key='large', **button_style), sg.Push()],
+              [sg.VPush()],
+              [sg.Text("", key="-TEXT-", size=(30, 5), font=('Sans-Serif', 26), justification='c')],
+              [sg.VPush()]]
+
+    window = sg.Window("WhisperOSC", layout, finalize=True, resizable=True, size=(600, 320), icon='Images/OpenAI.ico')
+
+    window['-TEXT-'].expand(True, True)
+    text_element = window['-TEXT-']  # get the Text element by its key
+
+    #Preset the button colours
+    set_buttons()
+    
+
+    # start a separate thread to update the GUI
+    updateText_close = Event()
+    textUpdater = threading.Thread(target=update_text, args=(text_element, communicator, updateText_close))
+    textUpdater.start()
+
+
+    # read events from the GUI in the main thread
+    while True:
+        event, values = window.read()
+        if event == sg.WIN_CLOSED:
+            break
+        if event == 'tiny':
+            model = 'tiny'
+            OSCListener = run_model(OSCListener)
+            
+        if event == 'base':
+            model = 'base'
+            OSCListener = run_model(OSCListener)
+            
+        if event == 'small':
+            model = 'small'
+            OSCListener = run_model(OSCListener)
+
+        if event == 'medium':
+            model = 'medium'
+            OSCListener = run_model(OSCListener)
+
+        if event == 'large':
+            model = 'large'
+            OSCListener = run_model(OSCListener)
+            
+    print("Closing app")
+    stop_event.set()
+    OSCListener.join()
+    
+    updateText_close.set()
+    textUpdater.join()
+    print("Updater closed")
+
     window.close()
 
 
 if __name__ == "__main__":
-    main()
+    communicator = Queue()
+    communicator.put("")
+
+    GUI(communicator)
+
+
