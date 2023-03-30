@@ -125,15 +125,18 @@ def main(model, noEnglish, communicator, stop_event):
                 #print(result['segments'][0]['no_speech_prob'])
 
                 #Only prints out if the ai is certain that it's speech. Prevents hallucinations.
-                if result['segments'][0]['no_speech_prob'] < 0.2:
-                    text = result['text'].strip()
 
-                    #Logging stuff is fun
-                    print(text)
+                if len(result['segments']) > 0:
+                    if result['segments'][0]['no_speech_prob'] < 0.2:
+                        text = result['text'].strip()
+
+                        #Logging stuff is fun
+                        print(text)
+                    
+                        #Send the text to vrchat and the GUI, while limiting it to 144 characters
+                        client.send_message("/chatbox/input", [text[len(text)-144:len(text)], True])
+                        communicator.put(text[len(text)-144:len(text)])
                 
-                    #Send the text to vrchat and the GUI, while limiting it to 144 characters
-                    client.send_message("/chatbox/input", [text[len(text)-144:len(text)], True])
-                    communicator.put(text[len(text)-144:len(text)])
                 
                 
 
