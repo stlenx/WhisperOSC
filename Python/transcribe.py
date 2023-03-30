@@ -122,14 +122,20 @@ def main(model, noEnglish, communicator, stop_event):
 
                 # Read the transcription.
                 result = audio_model.transcribe(temp_file, fp16=torch.cuda.is_available())
-                text = result['text'].strip()
+                #print(result['segments'][0]['no_speech_prob'])
 
-                #Logging stuff is fun
-                print(text)
+                #Only prints out if the ai is certain that it's speech. Prevents hallucinations.
+                if result['segments'][0]['no_speech_prob'] < 0.2:
+                    text = result['text'].strip()
+
+                    #Logging stuff is fun
+                    print(text)
                 
-                #Send the text to vrchat and the GUI, while limiting it to 144 characters
-                client.send_message("/chatbox/input", [text[len(text)-144:len(text)], True])
-                communicator.put(text[len(text)-144:len(text)])
+                    #Send the text to vrchat and the GUI, while limiting it to 144 characters
+                    client.send_message("/chatbox/input", [text[len(text)-144:len(text)], True])
+                    communicator.put(text[len(text)-144:len(text)])
+                
+                
 
                 # Infinite loops are bad for processors, must sleep.
                 sleep(0.25)
