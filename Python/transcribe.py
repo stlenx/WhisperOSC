@@ -136,6 +136,7 @@ def main(model, noEnglish, communicator, stop_event):
         except KeyboardInterrupt:
             break
 
+    #Empty the vram use and clean everything up
     del audio_model
     if torch.cuda.is_available():
         torch.cuda.empty_cache()

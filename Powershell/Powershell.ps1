@@ -1,0 +1,1 @@
+python .\Python\transcribe.py | Out-Null
