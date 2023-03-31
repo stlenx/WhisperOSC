@@ -60,9 +60,12 @@ def main(model, noEnglish, communicator, stop_event, mute_event):
         source = sr.Microphone(sample_rate=16000)
         
     # Load / Download model
+    # Initialize the device
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    
     if model != "large" and not noEnglish:
         model = model + ".en"
-    audio_model = whisper.load_model(model)
+    audio_model = whisper.load_model(model, device=device)
 
     record_timeout = 2 #Default
     phrase_timeout = 3 #Default
@@ -97,7 +100,10 @@ def main(model, noEnglish, communicator, stop_event, mute_event):
         try:
             now = datetime.utcnow()
             # Pull raw recorded audio from the queue.
-            if not data_queue.empty() and not mute_event.is_set():
+            if mute_event.is_set():
+                data_queue = Queue()
+            
+            if not data_queue.empty():
                 phrase_complete = False
                 # If enough time has passed between recordings, consider the phrase complete.
                 # Clear the current working audio buffer to start over with the new data.
