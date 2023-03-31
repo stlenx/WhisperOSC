@@ -22,7 +22,7 @@ from pythonosc import udp_client
 from pythonosc.dispatcher import Dispatcher
 from pythonosc.osc_server import BlockingOSCUDPServer
 
-def main(model, noEnglish, communicator, stop_event):
+def main(model, noEnglish, communicator, stop_event, mute_event):
     # The last time a recording was retreived from the queue.
     phrase_time = None
     # Current raw audio bytes.
@@ -97,7 +97,7 @@ def main(model, noEnglish, communicator, stop_event):
         try:
             now = datetime.utcnow()
             # Pull raw recorded audio from the queue.
-            if not data_queue.empty():
+            if not data_queue.empty() and not mute_event.is_set():
                 phrase_complete = False
                 # If enough time has passed between recordings, consider the phrase complete.
                 # Clear the current working audio buffer to start over with the new data.
@@ -160,7 +160,8 @@ def GUI(communicator):
     noEnglish = False
     
     stop_event = Event()
-    OSCListener = threading.Thread(target=main, args=(model, noEnglish, communicator, stop_event))
+    mute_event = Event()
+    OSCListener = threading.Thread(target=main, args=(model, noEnglish, communicator, stop_event, mute_event))
     OSCListener.start()
 
     sg.theme('DarkGrey6')
@@ -189,7 +190,7 @@ def GUI(communicator):
 
         #Reset the stop event so the next listener doesn't immediatedly stop
         stop_event.clear()
-        OSCListener = threading.Thread(target=main, args=(model, noEnglish, communicator, stop_event))
+        OSCListener = threading.Thread(target=main, args=(model, noEnglish, communicator, stop_event, mute_event))
         OSCListener.start()
 
         return OSCListener
@@ -208,16 +209,16 @@ def GUI(communicator):
         print("Stopping the text update.")
 
 
-    button_style = {'font': ('Sans-Serif', 18),
+    b_style = {'font': ('Sans-Serif', 18),
                 'border_width': 0,
                 'pad': (8, 8),
                 'button_color': unselected_color}
     
-    layout = [[sg.Push(), sg.Button('tiny', key='tiny', **button_style), sg.Button('base', key='base', **button_style), sg.Button('small', key='small', **button_style), sg.Button('medium', key='medium', **button_style), sg.Button('large', key='large', **button_style), sg.Push()],
+    layout = [[sg.Push(), sg.B('tiny', key='tiny', **b_style), sg.B('base', key='base', **b_style), sg.B('small', key='small', **b_style), sg.B('medium', key='medium', **b_style), sg.B('large', key='large', **b_style), sg.VerticalSeparator(), sg.B('Non english', key='noEnglish', **b_style), sg.Push()],
               [sg.VPush()],
               [sg.Text("", key="-TEXT-", size=(33, 4), font=('Sans-Serif', 26), justification='c')],
               [sg.VPush()],
-              [sg.Push(), sg.Button('Non english', key='noEnglish', **button_style), sg.Push()]]
+              [sg.Push(), sg.B('Stop model', key='stop', **b_style), sg.B('Mute', key='mute', **b_style), sg.Push()]]
 
     window = sg.Window("WhisperOSC", layout, finalize=True, resizable=True, size=(669, 320), icon='Images/OpenAI.ico')
 
@@ -238,6 +239,7 @@ def GUI(communicator):
         if event == sg.WIN_CLOSED:
             break
 
+        #Juicy no english toggle
         if event == 'noEnglish':
             if noEnglish:
                 window['noEnglish'].Update(button_color = unselected_color)
@@ -247,24 +249,44 @@ def GUI(communicator):
                 noEnglish = True
 
             OSCListener = run_model(OSCListener)
-        
-        if event == 'tiny':
+ 
+        #Kill the model
+        elif event == 'stop':
+            stop_event.set()
+            OSCListener.join()
+            stop_event.clear()
+            window[model].Update(button_color = unselected_color)
+            communicator.put("Model stopped")
+
+        #The all very important mute toggle
+        elif event == 'mute':
+            if mute_event.is_set():
+                window['mute'].Update('Mute')
+                communicator.put("Unmuted")
+                mute_event.clear()
+            else:
+                window['mute'].Update('Unmute')
+                communicator.put("Muted")
+                mute_event.set()
+
+        #Buttons for the different models
+        elif event == 'tiny':
             model = 'tiny'
             OSCListener = run_model(OSCListener)
             
-        if event == 'base':
+        elif event == 'base':
             model = 'base'
             OSCListener = run_model(OSCListener)
             
-        if event == 'small':
+        elif event == 'small':
             model = 'small'
             OSCListener = run_model(OSCListener)
 
-        if event == 'medium':
+        elif event == 'medium':
             model = 'medium'
             OSCListener = run_model(OSCListener)
 
-        if event == 'large':
+        elif event == 'large':
             model = 'large'
             OSCListener = run_model(OSCListener)
             
