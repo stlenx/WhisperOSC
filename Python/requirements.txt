@@ -12,3 +12,5 @@ pyyaml
 googletrans==4.0.0rc1
 deepl
 vosk
+ctranslate2
+faster-whisper
