@@ -1,0 +1,4 @@
+{
+    "version": 1.0,
+    "changelog": "Now using fast-whisper for more performance with less memory use"
+}

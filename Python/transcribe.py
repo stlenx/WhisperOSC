@@ -240,6 +240,8 @@ def GUI(communicator):
               [sg.VPush()],
               [sg.Push(), sg.B('Stop model', key='stop', **b_style), sg.B('Mute', key='mute', **b_style), sg.Push()]]
 
+    settings_layout = [[sg.B('Hello world')]] 
+
     window = sg.Window("WhisperOSC", layout, finalize=True, resizable=True, size=(669, 320), icon='Images/OpenAI.ico')
 
     window['-TEXT-'].expand(True, True)
@@ -288,6 +290,14 @@ def GUI(communicator):
                 window['mute'].Update('Unmute')
                 communicator.put("Muted")
                 mute_event.set()
+        elif event == 'settings':
+            settings_window = sg.Window("Settings", settings_layout, modal=True, resizable=True, size=(669, 320), icon='Images/OpenAI.ico')
+            # Event loop for the settings window
+            while True:
+                event2 = settings_window.read()
+                if event2 == sg.WINDOW_CLOSED or event2 == "Close":                
+                    break
+            settings_window.close()
 
         #Buttons for the different models
         elif event == 'tiny':
