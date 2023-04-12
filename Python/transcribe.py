@@ -7,6 +7,7 @@ import speech_recognition as sr
 from faster_whisper import WhisperModel
 import torch
 import gc
+import numpy as np
 
 import threading
 from threading import Event
@@ -68,8 +69,9 @@ def main(model, noEnglish, communicator, stop_event, mute_event):
     # Initialize the device
 
     if torch.cuda.is_available():
+        #Theoretically int8_float16 is faster, but perhaps the loss on precision is too much. Need further testing
         device = "cuda"
-        compute_type = "int8_float16"
+        compute_type = "float16"
     else:
         device = "cpu"
         compute_type = "int8"
@@ -84,10 +86,11 @@ def main(model, noEnglish, communicator, stop_event, mute_event):
     except Exception as e:
         pass
 
-    record_timeout = 2 #Default
-    phrase_timeout = 3 #Default
+    record_timeout = 5
+    phrase_timeout = 7
 
     temp_file = NamedTemporaryFile().name
+
 
     with source:
         recorder.adjust_for_ambient_noise(source)
@@ -139,46 +142,43 @@ def main(model, noEnglish, communicator, stop_event, mute_event):
                 audio_data = sr.AudioData(last_sample, source.SAMPLE_RATE, source.SAMPLE_WIDTH)
                 wav_data = io.BytesIO(audio_data.get_wav_data())
 
+                #print("I'm gonna try!")
+                # convert the audio data to a NumPy ndarray
+                #audio_array = np.frombuffer(audio_data.frame_data, dtype=np.int16)
+                
+
                 # Write wav data to the temporary file as bytes.
                 with open(temp_file, 'w+b') as f:
                     f.write(wav_data.read())
 
                 # Read the transcription.
-                result, info = audio_model.transcribe(temp_file, no_speech_threshold=0.15, log_prob_threshold=0.5)
+                result, info = audio_model.transcribe(temp_file, no_speech_threshold=0.3, log_prob_threshold=0.2)
                 #print(result['segments'][0]['no_speech_prob'])
 
-                for segment in result:
-                    text = segment.text.strip()
+                transcription = "".join(segment.text for segment in result).strip()
+                print(transcription)
 
-                    #Logging stuff is fun
-                    print(text)
-
-                    #Send the text to vrchat and the GUI, while limiting it to 144 characters
-                    client.send_message("/chatbox/input", [text[len(text)-144:len(text)], True])
-                    communicator.put(text[len(text)-144:len(text)])
-                    
+                client.send_message("/chatbox/input", [transcription[len(transcription)-144:len(transcription)], True])
+                communicator.put(transcription[len(transcription)-144:len(transcription)])
 
                 # Infinite loops are bad for processors, must sleep.
-                sleep(0.25)
+                sleep(0.1)
         except KeyboardInterrupt:
             break
 
-    print("hey let's close")
     #Empty the vram use and clean everything up
     #del audio_model
-    print("Audio model nuked")
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
-    print("Last thing and we're done")
     gc.collect()
     print("\nModel closed")
 
 
 
 def GUI(communicator):
-    model = 'tiny'
-    noEnglish = False
+    model = 'base' #Default model
+    noEnglish = False #Default english
     
     stop_event = Event()
     mute_event = Event()
@@ -193,7 +193,6 @@ def GUI(communicator):
         window['tiny'].Update(button_color = unselected_color)
         window['base'].Update(button_color = unselected_color)
         window['small'].Update(button_color = unselected_color)
-        window['medium'].Update(button_color = unselected_color)
 
         window[model].Update(button_color = selected_color)
 
@@ -218,9 +217,15 @@ def GUI(communicator):
     
     #This function runs in a separate thread and updates the GUI text
     def update_text(text_element, communicator, stop_event):
+        prev_text = ""
         while not stop_event.is_set():
             try:
-                text_element.update(communicator.get(timeout=0.1))
+                now_text = communicator.get(timeout=0.1)
+
+                if prev_text != now_text:
+                    text_element.update(now_text)
+                    prev_text = now_text
+                
             except Exception as e:
                 if not communicator.empty():
                     print(f"Caught exception in update_text: {e}")
@@ -229,20 +234,22 @@ def GUI(communicator):
         print("Stopping the text update.")
 
 
-    b_style = {'font': ('Sans-Serif', 18),
-                'border_width': 0,
-                'pad': (8, 8),
-                'button_color': unselected_color}
+    sg.set_options(font=("'Sans-Serif", 18), border_width=0)
     
-    layout = [[sg.Push(), sg.B('tiny', key='tiny', **b_style), sg.B('base', key='base', **b_style), sg.B('small', key='small', **b_style), sg.B('medium', key='medium', **b_style), sg.VerticalSeparator(), sg.B('Non english', key='noEnglish', **b_style), sg.Push()],
+    b_style = {'pad': (8, 8), 'button_color': unselected_color}
+    
+    model_layout = [[sg.VPush()],
+              [sg.Text("", key="-TEXT-", size=(33, 5), font=('Sans-Serif', 26), justification='c')],
               [sg.VPush()],
-              [sg.Text("", key="-TEXT-", size=(33, 4), font=('Sans-Serif', 26), justification='c')],
-              [sg.VPush()],
-              [sg.Push(), sg.B('Stop model', key='stop', **b_style), sg.B('Mute', key='mute', **b_style), sg.Push()]]
+              [sg.Push(), sg.B('Stop model', key='stop', **b_style), sg.B('Mute', key='mute', **b_style), sg.VerticalSeparator(), sg.B('Non english', key='noEnglish', **b_style), sg.Push()]]
 
-    settings_layout = [[sg.B('Hello world')]] 
+    settings_layout = [[sg.Text("Model size:")],
+                [sg.B('tiny', key='tiny', **b_style), sg.B('base', key='base', **b_style), sg.B('small', key='small', **b_style)]]
 
-    window = sg.Window("WhisperOSC", layout, finalize=True, resizable=True, size=(669, 320), icon='Images/OpenAI.ico')
+    main_layout = [[sg.TabGroup([[sg.Tab('Main', model_layout), sg.Tab('Settings', settings_layout)]], border_width=1, tab_background_color=selected_color, pad=((0, 0), (0, 0)))]]
+
+
+    window = sg.Window("WhisperOSC", main_layout, finalize=True, resizable=False, size=(669, 325), icon='Images/OpenAI.ico')
 
     window['-TEXT-'].expand(True, True)
     text_element = window['-TEXT-']  # get the Text element by its key
@@ -290,14 +297,6 @@ def GUI(communicator):
                 window['mute'].Update('Unmute')
                 communicator.put("Muted")
                 mute_event.set()
-        elif event == 'settings':
-            settings_window = sg.Window("Settings", settings_layout, modal=True, resizable=True, size=(669, 320), icon='Images/OpenAI.ico')
-            # Event loop for the settings window
-            while True:
-                event2 = settings_window.read()
-                if event2 == sg.WINDOW_CLOSED or event2 == "Close":                
-                    break
-            settings_window.close()
 
         #Buttons for the different models
         elif event == 'tiny':
@@ -310,10 +309,6 @@ def GUI(communicator):
             
         elif event == 'small':
             model = 'small'
-            OSCListener = run_model(OSCListener)
-
-        elif event == 'medium':
-            model = 'medium'
             OSCListener = run_model(OSCListener)
             
     print("\nClosing model")

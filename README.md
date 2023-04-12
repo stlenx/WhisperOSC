@@ -12,14 +12,15 @@ Before running the app, make sure to install the dependencies by running the INS
 
 ![Showcase](Images/Showcase.PNG)
 
-There's different AI models to use, the better they are the more accurate the transcription, but the more performance and **VRAM** required. Play around with them to find what works best for you. I recommend base.
+There's different AI models to use, the better they are the more accurate the transcription, but the more performance and **VRAM** required. It is important to remember that while the accuracy of the output is better the bigger the model is, it'll also take slightly longer to run, therefore increasing latency (Meaning more time passes between you speaking and the text appearing).
+Play around with them to find what works best for you. I recommend base.
 
-|  Size  | Parameters | Required VRAM | Relative speed |
-|:------:|:----------:|:-------------:|:--------------:|
-|  tiny  |    39 M    |     ~500 MB     |      ~32x      |
-|  base  |    74 M    |     ~500 MB     |      ~16x      |
-| small  |   244 M    |     ~1 GB     |      ~6x       |
-| medium |   769 M    |     ~2.5 GB     |      ~2x       |
+|  Size  | Parameters | Required VRAM |
+|:------:|:----------:|:-------------:|
+|  tiny  |    39 M    |     ~500 MB     |
+|  base  |    74 M    |     ~500 MB     |
+| small  |   244 M    |     ~1 GB     |
+
 
 If you toggle Non English mode, it's a "language free" mode. This means that you can speak in whatever language you like, and it'll just work. You can switch language to language from one sentence to another. However, since the AI needs to identify the language it can get it wrong. If you're only going to speak english, stick to having it off.
 
