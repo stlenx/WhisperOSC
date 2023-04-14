@@ -1,0 +1,173 @@
+:root {
+    --lighter: #4D4D4D;
+    --light: #343434;
+    --dark: #252525;
+    --red: #EDADAD;
+    --green: #CAFFBF;
+}
+
+body {
+    color: white;
+    background-color: var(--dark);
+    font-family: sans-serif;
+    margin: 0;
+}
+
+.superContainer {
+    position: fixed;
+    top: 5px;
+    left: 0;
+    right: 5px;
+    bottom: 5px;
+
+    padding: 5px;
+
+    display: flex;
+}
+
+.navBar {
+    flex-basis: 15%;
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.tab {
+    padding: 15px;
+
+    background-color: var(--light);
+    border-radius: 10px;
+
+    display: flex;
+    flex-grow: 1;
+    flex-basis: 80%;
+}
+
+.container {
+    height: 100%;
+    background-color: var(--dark);
+    border-radius: 10px;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    flex-grow: 1;
+}
+.tab:not(#MainTab) .container {
+    height: unset;
+    background-color: unset;
+    justify-content: left;
+}
+
+.container:has(+.container) {
+    margin-right: 10px;
+}
+
+.textContainer {
+    flex-basis: 80%;
+}
+
+.controlsContainer {
+    background-color: var(--light);
+    flex-basis: 15%;
+
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+}
+
+.button {
+    background-color: var(--dark);
+    padding: 20px 10px;
+    border-radius: 10px;
+
+    width: 70%;
+
+    margin: 10px 0;
+
+    text-align: center;
+    font-size: 1.1em;
+
+    transition: box-shadow 0.05s ease-in-out;
+}
+.button:first-child {
+    /* Button before other buttons */
+    margin: 0 0 10px 0;
+}
+.button:last-child {
+    /* Button after other buttons */
+    margin: 10px 0 0 0;
+}
+
+.button:hover {
+    cursor: pointer;
+    background-color: var(--light);
+    box-shadow: 0 0 0 3px var(--lighter);
+}
+
+.navBar .button {
+    padding: 10px;
+    background-color: var(--light);
+    margin: 4px 0;
+}
+.navBar .button.selected {
+    background-color: var(--lighter);
+}
+.navBar .button:hover {
+    border: unset;
+    background-color: var(--lighter);
+}
+
+.tab:not(#MainTab) .container .button{
+    margin: 0 5px;
+    width: 20%;
+}
+.tab:not(#MainTab) .container .button.selected{
+    background-color: var(--lighter);
+}
+
+.red {
+    color: var(--red);
+}
+.green {
+    color: var(--green);
+}
+
+#InputTab {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+}
+textarea {
+    border: none;
+    border-radius: 5px;
+
+    background-color: var(--dark);
+    color: white;
+
+    font-family: sans-serif;
+    font-size: 1.4em;
+
+    resize: none;
+    flex-grow: 1;
+    height: 50%;
+    width: 98.5%;
+    padding: 5px;
+    margin-bottom: 15px;
+}
+#InputTab .button {
+    height: 5%;
+    margin: 0 auto;
+}
+
+textarea:focus {
+    outline: 2px solid var(--red);
+}
+
+#text {
+    text-align: center;
+    font-size: 2.2em;
+}

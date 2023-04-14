@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>WhisperOSC</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <script src="renderer.js" defer></script>
+
+    <div class="superContainer">
+        <div class="navBar">
+            <div id="MainButton" class="button selected">Main</div>
+            <div id="InputButton" class="button">Input</div>
+            <div id="SettingsButton" class="button">Settings</div>
+        </div>
+
+        <div id="MainTab" class="tab">
+            <div class="container textContainer">
+                <h1 id="text">Preparing to load model</h1>
+            </div>
+
+            <div class="container controlsContainer">
+                <div id="StopButton" class="button green">Stop model</div>
+                <div id="MuteButton" class="button green">Unmuted</div>
+                <div id="ClearButton" class="button">Clear</div>
+                <div id="NoEnglishButton" class="button red">Non English</div>
+            </div>
+        </div>
+
+        <div id="InputTab" class="tab" style="display: none">
+            <textarea id="SendText" spellcheck="false"></textarea>
+
+            <div id="SendButton" class="button">Send</div>
+        </div>
+
+        <div id="SettingsTab" class="tab"  style="display: none">
+            <h1>Model size:</h1>
+            <div class="container">
+                <div id="TinyButton" class="button">tiny</div>
+                <div id="BaseButton" class="button selected">base</div>
+                <div id="SmallButton" class="button">small</div>
+            </div>
+
+        </div>
+    </div>
+
+
+  </body>
+</html>

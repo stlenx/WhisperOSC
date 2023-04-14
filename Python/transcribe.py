@@ -25,7 +25,7 @@ from pythonosc import udp_client
 from pythonosc.dispatcher import Dispatcher
 from pythonosc.osc_server import BlockingOSCUDPServer
 
-def main(model, noEnglish, communicator, stop_event, mute_event):
+def main(model, noEnglish, deviceToUse, communicator, stop_event, mute_event):
     # Get sent to the abyss byee!
     sys.stderr = open('Python\err.txt', 'w')
     
@@ -40,13 +40,6 @@ def main(model, noEnglish, communicator, stop_event, mute_event):
     recorder.energy_threshold = 1000
     # Definitely do this, dynamic energy compensation lowers the energy threshold dramtically to a point where the SpeechRecognizer never stops recording.
     recorder.dynamic_energy_threshold = False
-
-    if torch.cuda.is_available():
-        print("Using GPU, Loading model...")
-        communicator.put("Using GPU, Loading model...")
-    else:
-        print("GPU not available, using CPU, Loading model...")
-        communicator.put("GPU not available, using CPU, Loading model...")
     
     # Important for linux users. 
     # Prevents permanent application hang and crash by using the wrong Microphone
@@ -68,13 +61,24 @@ def main(model, noEnglish, communicator, stop_event, mute_event):
     # Load / Download model
     # Initialize the device
 
-    if torch.cuda.is_available():
+    if torch.cuda.is_available() and deviceToUse == "GPU":
         #Theoretically int8_float16 is faster, but perhaps the loss on precision is too much. Need further testing
         device = "cuda"
         compute_type = "float16"
+
+        print("Using GPU, Loading model...")
+        communicator.put("Using GPU, Loading model...")
     else:
         device = "cpu"
         compute_type = "int8"
+
+        if deviceTouse == "GPU":
+            print("GPU not available, using CPU, Loading model...")
+            communicator.put("GPU not available, using CPU, Loading model...")
+        else:
+            print("Using CPU, Loading model...")
+            communicator.put("Using CPU, Loading model...")
+        
     
     if model != "large" and not noEnglish:
         model = model + ".en"
@@ -179,10 +183,11 @@ def main(model, noEnglish, communicator, stop_event, mute_event):
 def GUI(communicator):
     model = 'base' #Default model
     noEnglish = False #Default english
+    deviceTouse = "GPU"
     
     stop_event = Event()
     mute_event = Event()
-    OSCListener = threading.Thread(target=main, args=(model, noEnglish, communicator, stop_event, mute_event))
+    OSCListener = threading.Thread(target=main, args=(model, noEnglish, deviceTouse, communicator, stop_event, mute_event))
     OSCListener.start()
 
     sg.theme('DarkGrey6')
@@ -209,7 +214,7 @@ def GUI(communicator):
 
         #Reset the stop event so the next listener doesn't immediatedly stop
         stop_event.clear()
-        OSCListener = threading.Thread(target=main, args=(model, noEnglish, communicator, stop_event, mute_event))
+        OSCListener = threading.Thread(target=main, args=(model, noEnglish, deviceTouse, communicator, stop_event, mute_event))
         OSCListener.start()
 
         return OSCListener
@@ -234,7 +239,7 @@ def GUI(communicator):
         print("Stopping the text update.")
 
 
-    sg.set_options(font=("'Sans-Serif", 18), border_width=0)
+    sg.set_options(font=("Sans-Serif", 18), border_width=0)
     
     b_style = {'pad': (8, 8), 'button_color': unselected_color}
     
@@ -244,7 +249,9 @@ def GUI(communicator):
               [sg.Push(), sg.B('Stop model', key='stop', **b_style), sg.B('Mute', key='mute', **b_style), sg.VerticalSeparator(), sg.B('Non english', key='noEnglish', **b_style), sg.Push()]]
 
     settings_layout = [[sg.Text("Model size:")],
-                [sg.B('tiny', key='tiny', **b_style), sg.B('base', key='base', **b_style), sg.B('small', key='small', **b_style)]]
+                [sg.B('tiny', key='tiny', **b_style), sg.B('base', key='base', **b_style), sg.B('small', key='small', **b_style)],
+                [sg.Text("Device to use:")],
+                [sg.Combo(['GPU', 'CPU'], default_value='GPU', font=('Sans-Serif', 18), enable_events=True,  readonly=True, key='-DEVICE-')]]
 
     main_layout = [[sg.TabGroup([[sg.Tab('Main', model_layout), sg.Tab('Settings', settings_layout)]], border_width=1, tab_background_color=selected_color, pad=((0, 0), (0, 0)))]]
 
@@ -310,6 +317,17 @@ def GUI(communicator):
         elif event == 'small':
             model = 'small'
             OSCListener = run_model(OSCListener)
+
+        #The gpu/cpu setting
+        elif event == '-DEVICE-': 
+            selected_option = values['-DEVICE-']
+            window['-DEVICE-'].update(selected_option)
+
+            #Restart the model with the new setting
+            print(selected_option)
+            deviceToUse = selected_option
+            OSCListener = run_model(OSCListener)
+
             
     print("\nClosing model")
     stop_event.set()

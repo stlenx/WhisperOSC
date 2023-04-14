@@ -1,1 +1,9 @@
-Fetching 6 files:   0%|                                                                          | 0/6 [00:00<?, ?it/s]Fetching 6 files: 100%|##########################################################################| 6/6 [00:00<?, ?it/s]
+Exception in thread Thread-1 (main):
+Traceback (most recent call last):
+  File "C:\Users\Sariku\AppData\Local\Programs\Python\Python310\lib\threading.py", line 1016, in _bootstrap_inner
+    self.run()
+  File "C:\Users\Sariku\AppData\Local\Programs\Python\Python310\lib\threading.py", line 953, in run
+    self._target(*self._args, **self._kwargs)
+  File "C:\Users\Sariku\Documents\OSC Stuff\WhisperOSC\Python\transcribe.py", line 75, in main
+    if deviceTouse == "GPU":
+NameError: name 'deviceTouse' is not defined. Did you mean: 'deviceToUse'?

@@ -1,0 +1,1 @@
+electron-packager . WhisperOSC --platform=win32 --arch=x64 --icon=.\OpenAI.ico --overwrite
