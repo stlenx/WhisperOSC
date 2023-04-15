@@ -35,6 +35,8 @@ function startModule() {
     pythonModule.stdout.on('data', (data) => {
         const output = data.toString();
         console.log(output)
+
+        SendOSC(output);
         win.webContents.send('python-output', output);
     });
 
@@ -51,8 +53,13 @@ function muteModule() {
     pythonModule.stdin.write('mute\n');
 }
 
-function clearModule() {
-    pythonModule.stdin.write('clear\n');
+
+function SendOSC(text) {
+    let sender = spawn('python', [path.join(__dirname, 'send.py'), text]);
+
+    sender.stderr.on('data', (data) => {
+        console.error(data.toString());
+    });
 }
 
 app.whenReady().then(() => {
@@ -81,7 +88,7 @@ ipcMain.on("model-mute", () => {
     muteModule();
 })
 ipcMain.on("model-clear", () => {
-    clearModule();
+    SendOSC("");
 })
 ipcMain.on("model-nonEnglish", () => {
     stopModule();
@@ -91,9 +98,5 @@ ipcMain.on("model-nonEnglish", () => {
 
 // Text
 ipcMain.on("text-send", (something, text) => {
-    let sender = spawn('python', [path.join(__dirname, 'send.py'), text]);
-
-    sender.stderr.on('data', (data) => {
-        console.error(data.toString());
-    });
+    SendOSC(text);
 })

@@ -6,6 +6,7 @@ from faster_whisper import WhisperModel
 import torch
 import gc
 import numpy as np
+import msvcrt
 
 import threading
 from threading import Event
@@ -21,14 +22,25 @@ from pythonosc.dispatcher import Dispatcher
 from pythonosc.osc_server import BlockingOSCUDPServer
 
 
-def SendText(client, text):
-    print(text[len(text)-144:len(text)])
-    sys.stdout.flush()
+def stdListener(stop, mute):
+    isMuted = False
+    while not stop.is_set():
+        for line in sys.stdin:
+            if line.strip() == 'stop':
+                stop.set()
+                break
+            elif line.strip() == 'mute':
+                sys.stdout.flush()
+                if isMuted:
+                    #unmute
+                    mute.clear()
+                else:
+                    #mute
+                    mute.set()
+                isMuted = not isMuted
 
-    client.send_message("/chatbox/input", [text[len(text)-144:len(text)], True])
 
-
-def main(model, noEnglish, deviceToUse):
+def main(model, noEnglish, deviceToUse, stop, mute):
     # The last time a recording was retreived from the queue.
     phrase_time = None
     # Current raw audio bytes.
@@ -88,7 +100,7 @@ def main(model, noEnglish, deviceToUse):
         pass
 
     record_timeout = 5
-    phrase_timeout = 7
+    phrase_timeout = 3
 
     temp_file = NamedTemporaryFile().name
 
@@ -109,35 +121,24 @@ def main(model, noEnglish, deviceToUse):
     # We could do this manually but SpeechRecognizer provides a nice helper.
     recorder.listen_in_background(source, record_callback, phrase_time_limit=record_timeout)
 
-    client = udp_client.SimpleUDPClient("127.0.0.1", 9000)
     current_text = ""
 
     # Cue the user that we're ready to go.
     print("Model loaded")
     sys.stdout.flush()
 
-
-    stop = False
-    mute = False
-    #If the stop event gets called, we stoppin
-    while not stop:
-        for line in sys.stdin:
-            if line.strip() == 'stop':
-                stop = True
-                break
-            elif line.strip() == 'mute':
-                mute = not mute
-            elif line.strip() == 'clear':
-                SendText(client, "")
-
-
+    while not stop.is_set():
         try:
             now = datetime.utcnow()
-            # Pull raw recorded audio from the queue.
-            if mute:
+
+            if mute.is_set():
                 data_queue = Queue()
+
             
             if not data_queue.empty():
+                print("tryingg")
+                sys.stdout.flush()
+
                 phrase_complete = False
                 # If enough time has passed between recordings, consider the phrase complete.
                 # Clear the current working audio buffer to start over with the new data.
@@ -169,7 +170,8 @@ def main(model, noEnglish, deviceToUse):
                 result, info = audio_model.transcribe(temp_file, no_speech_threshold=0.3, log_prob_threshold=0.2)
 
                 transcription = "".join(segment.text for segment in result).strip()
-                SendText(client, transcription)
+                print(transcription)
+                sys.stdout.flush()
 
                 # Infinite loops are bad for processors, must sleep.
                 sleep(0.1)
@@ -194,5 +196,14 @@ if inputNonEnglish == "false":
 else:
     inputNonEnglish = True
 
+stop = Event()
+mute = Event()
 
-main(inputModel, inputNonEnglish, inputDevice)
+listener = threading.Thread(target=stdListener, args=(stop, mute))
+listener.start()
+
+
+main(inputModel, inputNonEnglish, inputDevice, stop, mute)
+
+
+listener.join()

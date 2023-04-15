@@ -62,6 +62,7 @@ document.getElementById("MuteButton").addEventListener("click", () => {
 
 document.getElementById("ClearButton").addEventListener("click", () => {
     ipcRenderer.send("model-clear");
+    DOMtext.innerText = "";
 })
 
 document.getElementById("NoEnglishButton").addEventListener("click", () => {
