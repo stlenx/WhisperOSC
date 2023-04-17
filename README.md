@@ -5,8 +5,8 @@ This is a modified script from https://github.com/davabase/whisper_real_time to 
 ## Requirements
 
 > This app requires you to have FFMpeg installed and added to your PATH
-> ### This app requires Python 3.10 to be installed. Using pythong 3.11 will fail the installation
-> This app requires you to have git installed to install the dependencies
+> ### This app requires [Python 3.10](https://www.python.org/downloads/release/python-3108/) to be installed. Using pythong 3.11 will fail the installation
+> This app requires you to have [git](https://git-scm.com/download/win) installed to install the dependencies
 
 > If you want to use GPU, you must have the CUDA toolkit installed, **version 11**. Get it [here](https://developer.nvidia.com/cuda-11-7-1-download-archive).
 
