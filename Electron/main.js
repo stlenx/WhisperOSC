@@ -35,8 +35,6 @@ function startModule() {
     pythonModule.stdout.on('data', (data) => {
         const output = data.toString();
         console.log(output)
-
-        SendOSC(output);
         win.webContents.send('python-output', output);
     });
 

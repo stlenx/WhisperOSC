@@ -122,6 +122,7 @@ def main(model, noEnglish, deviceToUse, stop, mute):
     recorder.listen_in_background(source, record_callback, phrase_time_limit=record_timeout)
 
     current_text = ""
+    client = udp_client.SimpleUDPClient("127.0.0.1", 9000)
 
     # Cue the user that we're ready to go.
     print("Model loaded")
@@ -136,9 +137,6 @@ def main(model, noEnglish, deviceToUse, stop, mute):
 
             
             if not data_queue.empty():
-                print("tryingg")
-                sys.stdout.flush()
-
                 phrase_complete = False
                 # If enough time has passed between recordings, consider the phrase complete.
                 # Clear the current working audio buffer to start over with the new data.
@@ -172,6 +170,7 @@ def main(model, noEnglish, deviceToUse, stop, mute):
                 transcription = "".join(segment.text for segment in result).strip()
                 print(transcription)
                 sys.stdout.flush()
+                client.send_message("/chatbox/input", [transcription, True])
 
                 # Infinite loops are bad for processors, must sleep.
                 sleep(0.1)
