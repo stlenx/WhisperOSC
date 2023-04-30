@@ -83,7 +83,7 @@ def main(model, noEnglish, deviceToUse, stop, mute):
         device = "cpu"
         compute_type = "int8"
 
-        if deviceTouse == "GPU":
+        if deviceToUse == "GPU":
             print("GPU not available, using CPU, Loading model...")
         else:
             print("Using CPU, Loading model...")
